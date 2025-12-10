@@ -39,7 +39,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
 # ----------------- CONFIG -----------------
-APP_TITLE = "Smart Parking Management System (Upgraded)"
+APP_TITLE = "Smart Parking Management System"
 DB_FILE = "parking_system_upgraded.db"
 WINDOW_SIZE = "1100x700"
 CURRENCY = "UGX"
@@ -543,6 +543,7 @@ class App(tk.Tk):
         self.config(menu=menubar)
         account_menu = tk.Menu(menubar, tearoff=0)
         account_menu.add_command(label="Profile", command=self.show_profile)
+        account_menu.add_command(label="Switch Account", command=self.switch_account)
         account_menu.add_separator()
         account_menu.add_command(label="Exit", command=self.quit)
         menubar.add_cascade(label="Account", menu=account_menu)
@@ -580,6 +581,18 @@ class App(tk.Tk):
             toast(self, "Login first!", bg=ERROR)
             return
         self.show_page("ProfilePage")
+    
+    def switch_account(self):
+        """Log out current user and return to login page"""
+        if not self.current_user:
+            toast(self, "No user logged in", bg=ERROR)
+            return
+        
+        if messagebox.askyesno("Switch Account", f"Log out from {self.current_user} and switch account?"):
+            self.current_user = None
+            self.current_user_role = None
+            self.show_page("LoginPage")
+            toast(self, "Logged out successfully", bg=SUCCESS)
 
 # ----------------- PAGES -----------------
 class Page(tk.Frame):
@@ -1405,8 +1418,14 @@ class ProfilePage(Page):
         self.email = tk.Entry(card, width=30); self.email.pack(pady=6)
         tk.Label(card, text="New Password (leave blank to keep current):", bg=CARD).pack(anchor="w")
         self.newpw = tk.Entry(card, show="*", width=30); self.newpw.pack(pady=6)
-        tk.Button(card, text="Save Profile", bg=ACCENT, fg="white", command=self.save_profile).pack(pady=8)
-        tk.Button(card, text="Back", command=lambda: self.app.show_page("DashboardPage")).pack()
+        
+        # Buttons frame
+        btn_frame = tk.Frame(card, bg=CARD)
+        btn_frame.pack(pady=8)
+        tk.Button(btn_frame, text="Save Profile", bg=ACCENT, fg="white", command=self.save_profile, width=15).pack(side="left", padx=5)
+        tk.Button(btn_frame, text="Switch Account", bg="#f59e0b", fg="white", command=self.app.switch_account, width=15).pack(side="left", padx=5)
+        
+        tk.Button(card, text="Back", command=self.back_to_dashboard).pack(pady=5)
 
     def refresh(self):
         if not self.app.current_user:
@@ -1431,7 +1450,14 @@ class ProfilePage(Page):
         if new_pw:
             self.app.db.update_password(self.app.current_user, new_pw)
         toast(self.app, "Profile updated", bg=SUCCESS)
-        self.app.show_page("DashboardPage")
+        self.back_to_dashboard()
+    
+    def back_to_dashboard(self):
+        """Navigate back to appropriate dashboard based on user role"""
+        if self.app.current_user_role == "admin":
+            self.app.show_page("DashboardPage")
+        else:
+            self.app.show_page("UserDashboardPage")
 
 # ---------- SETTINGS PAGE ----------
 class SettingsPage(Page):
@@ -1529,6 +1555,21 @@ class SettingsPage(Page):
             car_rate = float(self.car_rate.get())
             motor_rate = float(self.motor_rate.get())
             
+            if car_rate <= 0 or motor_rate <= 0:
+                toast(self.app, "Rates must be positive numbers", bg=ERROR)
+                return
+            
+            # Validate SMTP port
+            smtp_port_str = self.smtp_port.get().strip()
+            if smtp_port_str:
+                try:
+                    smtp_port = int(smtp_port_str)
+                    if smtp_port <= 0 or smtp_port > 65535:
+                        raise ValueError("Port out of range")
+                except ValueError:
+                    toast(self.app, "SMTP Port must be a valid number (1-65535)", bg=ERROR)
+                    return
+            
             self.app.db.set_setting('car_rate', str(car_rate))
             self.app.db.set_setting('motor_rate', str(motor_rate))
             
@@ -1545,38 +1586,73 @@ class SettingsPage(Page):
             
             # Update global email settings
             EMAIL_SETTINGS['smtp_server'] = self.smtp_server.get()
-            EMAIL_SETTINGS['smtp_port'] = int(self.smtp_port.get())
+            EMAIL_SETTINGS['smtp_port'] = int(self.smtp_port.get()) if self.smtp_port.get().strip() else 587
             EMAIL_SETTINGS['sender_email'] = self.sender_email.get()
             EMAIL_SETTINGS['sender_password'] = self.sender_password.get()
             EMAIL_SETTINGS['enabled'] = self.email_enabled.get()
             
             toast(self.app, "Settings saved successfully!", bg=SUCCESS)
-        except ValueError:
-            toast(self.app, "Invalid rate values", bg=ERROR)
+        except ValueError as e:
+            toast(self.app, f"Invalid values: {str(e)}", bg=ERROR)
+        except Exception as e:
+            toast(self.app, f"Error saving settings: {str(e)}", bg=ERROR)
     
     def test_email(self):
         test_email = simpledialog.askstring("Test Email", "Enter email address to send test:")
         if not test_email:
             return
         
-        # Update email settings temporarily
-        EMAIL_SETTINGS['smtp_server'] = self.smtp_server.get()
-        EMAIL_SETTINGS['smtp_port'] = int(self.smtp_port.get())
-        EMAIL_SETTINGS['sender_email'] = self.sender_email.get()
-        EMAIL_SETTINGS['sender_password'] = self.sender_password.get()
-        EMAIL_SETTINGS['enabled'] = True
-        
-        success, msg = send_email_with_attachment(
-            test_email,
-            "Test Email from Smart Parking System",
-            "This is a test email. If you received this, your email configuration is working correctly!",
-            None
-        )
-        
-        if success:
-            toast(self.app, "Test email sent successfully!", bg=SUCCESS)
-        else:
-            toast(self.app, f"Email test failed: {msg}", bg=ERROR)
+        try:
+            # Validate inputs
+            smtp_server = self.smtp_server.get().strip()
+            smtp_port_str = self.smtp_port.get().strip()
+            sender_email = self.sender_email.get().strip()
+            sender_password = self.sender_password.get()
+            
+            if not smtp_server:
+                toast(self.app, "SMTP Server is required", bg=ERROR)
+                return
+            
+            if not smtp_port_str:
+                toast(self.app, "SMTP Port is required", bg=ERROR)
+                return
+            
+            try:
+                smtp_port = int(smtp_port_str)
+                if smtp_port <= 0 or smtp_port > 65535:
+                    raise ValueError("Port out of range")
+            except ValueError:
+                toast(self.app, "SMTP Port must be a valid number (1-65535)", bg=ERROR)
+                return
+            
+            if not sender_email:
+                toast(self.app, "Sender Email is required", bg=ERROR)
+                return
+            
+            if not sender_password:
+                toast(self.app, "Sender Password is required", bg=ERROR)
+                return
+            
+            # Update email settings temporarily
+            EMAIL_SETTINGS['smtp_server'] = smtp_server
+            EMAIL_SETTINGS['smtp_port'] = smtp_port
+            EMAIL_SETTINGS['sender_email'] = sender_email
+            EMAIL_SETTINGS['sender_password'] = sender_password
+            EMAIL_SETTINGS['enabled'] = True
+            
+            success, msg = send_email_with_attachment(
+                test_email,
+                "Test Email from Smart Parking System",
+                "This is a test email. If you received this, your email configuration is working correctly!",
+                None
+            )
+            
+            if success:
+                toast(self.app, "Test email sent successfully!", bg=SUCCESS)
+            else:
+                toast(self.app, f"Email test failed: {msg}", bg=ERROR)
+        except Exception as e:
+            toast(self.app, f"Error testing email: {str(e)}", bg=ERROR)
 
 # ---------- REPORTS PAGE ----------
 class ReportsPage(Page):
