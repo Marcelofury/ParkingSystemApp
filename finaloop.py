@@ -22,6 +22,7 @@ import os
 import sys
 import math
 import smtplib
+import socket
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
@@ -128,10 +129,20 @@ def generate_pdf_receipt(vehicle_data, amount, duration_hours, payment_method, g
 
 def send_email_with_attachment(recipient, subject, body, attachment_path=None):
     """Send email with optional PDF attachment"""
-    if not EMAIL_SETTINGS['enabled'] or not EMAIL_SETTINGS['sender_email']:
-        return False, "Email not configured"
+    if not EMAIL_SETTINGS['enabled']:
+        return False, "Email is not enabled. Check 'Enable Email Notifications' in Settings."
+    
+    if not EMAIL_SETTINGS['sender_email']:
+        return False, "Sender email not configured. Please set it in Settings."
+    
+    if not EMAIL_SETTINGS['sender_password']:
+        return False, "Sender password not configured. Please set it in Settings."
+    
+    if not recipient or '@' not in recipient:
+        return False, f"Invalid recipient email address: {recipient}"
     
     try:
+        # Create message
         msg = MIMEMultipart()
         msg['From'] = EMAIL_SETTINGS['sender_email']
         msg['To'] = recipient
@@ -147,16 +158,28 @@ def send_email_with_attachment(recipient, subject, body, attachment_path=None):
                                 filename=os.path.basename(attachment_path))
                 msg.attach(attach)
         
-        # Send email
-        server = smtplib.SMTP(EMAIL_SETTINGS['smtp_server'], EMAIL_SETTINGS['smtp_port'])
+        # Connect and send
+        server = smtplib.SMTP(EMAIL_SETTINGS['smtp_server'], EMAIL_SETTINGS['smtp_port'], timeout=10)
         server.starttls()
         server.login(EMAIL_SETTINGS['sender_email'], EMAIL_SETTINGS['sender_password'])
         server.send_message(msg)
         server.quit()
         
         return True, "Email sent successfully"
+    except smtplib.SMTPAuthenticationError as e:
+        return False, f"Authentication failed. For Gmail, use App Password (not regular password). Error: {str(e)}"
+    except smtplib.SMTPConnectError as e:
+        return False, f"Cannot connect to SMTP server. Check server address and port. Error: {str(e)}"
+    except smtplib.SMTPServerDisconnected as e:
+        return False, f"Server disconnected unexpectedly. Check your internet connection. Error: {str(e)}"
+    except smtplib.SMTPException as e:
+        return False, f"SMTP error occurred: {str(e)}"
+    except socket.gaierror as e:
+        return False, f"Cannot resolve SMTP server address. Check server name. Error: {str(e)}"
+    except socket.timeout:
+        return False, "Connection timeout. Check your internet connection and firewall settings."
     except Exception as e:
-        return False, f"Email error: {str(e)}"
+        return False, f"Unexpected error: {type(e).__name__}: {str(e)}"
 
 def export_to_excel(data, headers, filepath):
     """Export data to Excel file"""
@@ -225,7 +248,7 @@ class DB:
                 email TEXT
             )
         """)
-        # VEHICLES: id, number, type, user (who parked), slot_id (nullable), entry_time, exit_time
+        # VEHICLES: id, number, type, user (who parked), slot_id (nullable), entry_time, exit_time, payment_method
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS vehicles (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -234,7 +257,8 @@ class DB:
                 user TEXT,
                 slot_id INTEGER,
                 entry_time TEXT,
-                exit_time TEXT
+                exit_time TEXT,
+                payment_method TEXT DEFAULT 'cash'
             )
         """)
         # SLOTS: id, name, type_allowed (Car/Motor/Both), status (free/occupied), hourly_rate
@@ -276,6 +300,12 @@ class DB:
     def _migrate_schema(self):
         """Add missing columns to existing tables for backward compatibility"""
         try:
+            # Check and add payment_method to vehicles table
+            self.cursor.execute("PRAGMA table_info(vehicles)")
+            cols = [col[1] for col in self.cursor.fetchall()]
+            if 'payment_method' not in cols:
+                self.cursor.execute("ALTER TABLE vehicles ADD COLUMN payment_method TEXT DEFAULT 'cash'")
+            
             # Check and add email column to users
             self.cursor.execute("PRAGMA table_info(users)")
             cols = [col[1] for col in self.cursor.fetchall()]
@@ -390,11 +420,11 @@ class DB:
         return self.cursor.fetchone()
 
     # --- vehicles CRUD ---
-    def park_vehicle(self, number, vtype, username, slot_id, entry_time):
+    def park_vehicle(self, number, vtype, username, slot_id, entry_time, payment_method='cash'):
         self.cursor.execute("""
-            INSERT INTO vehicles(number,type,user,slot_id,entry_time,exit_time)
-            VALUES(?,?,?,?,?,NULL)
-        """, (number, vtype, username, slot_id, entry_time))
+            INSERT INTO vehicles(number,type,user,slot_id,entry_time,exit_time,payment_method)
+            VALUES(?,?,?,?,?,NULL,?)
+        """, (number, vtype, username, slot_id, entry_time, payment_method))
         self.cursor.execute("UPDATE slots SET status='occupied' WHERE id=?", (slot_id,))
         self.conn.commit()
 
@@ -413,12 +443,12 @@ class DB:
         return self.cursor.rowcount
 
     def list_parked(self):
-        self.cursor.execute("SELECT id,number,type,user,slot_id,entry_time,exit_time FROM vehicles ORDER BY id DESC")
+        self.cursor.execute("SELECT id,number,type,user,slot_id,entry_time,exit_time,payment_method FROM vehicles ORDER BY id DESC")
         return self.cursor.fetchall()
 
     def search_vehicles(self, search_term="", date_from="", date_to=""):
         """Search vehicles by number, user, or date range"""
-        query = "SELECT id,number,type,user,slot_id,entry_time,exit_time FROM vehicles WHERE 1=1"
+        query = "SELECT id,number,type,user,slot_id,entry_time,exit_time,payment_method FROM vehicles WHERE 1=1"
         params = []
         
         if search_term:
@@ -438,7 +468,7 @@ class DB:
         return self.cursor.fetchall()
 
     def get_last_vehicle_record(self, number):
-        self.cursor.execute("SELECT id,number,type,user,slot_id,entry_time,exit_time FROM vehicles WHERE number=? ORDER BY id DESC LIMIT 1", (number,))
+        self.cursor.execute("SELECT id,number,type,user,slot_id,entry_time,exit_time,payment_method FROM vehicles WHERE number=? ORDER BY id DESC LIMIT 1", (number,))
         return self.cursor.fetchone()
 
     # --- payments ---
@@ -807,6 +837,14 @@ class UserDashboardPage(Page):
             toast(self.app, "Cancelled", bg=ERROR)
             return
         
+        # Ask for payment method upfront
+        payment_method = simpledialog.askstring("Payment Method", 
+                                               "Enter payment method (cash/card/digital):", 
+                                               initialvalue="cash")
+        if not payment_method:
+            toast(self.app, "Payment method required", bg=ERROR)
+            return
+        
         # Find free slot
         slot = self.app.db.get_free_slot_for_type(vtype)
         if not slot:
@@ -816,8 +854,8 @@ class UserDashboardPage(Page):
         slot_id = slot[0]
         entry_time = now_str()
         user = self.app.current_user or "unknown"
-        self.app.db.park_vehicle(number, vtype, user, slot_id, entry_time)
-        toast(self.app, f"Parked {number} at slot {slot[1]}", bg=SUCCESS)
+        self.app.db.park_vehicle(number, vtype, user, slot_id, entry_time, payment_method)
+        toast(self.app, f"Parked {number} at slot {slot[1]} - Payment: {payment_method.upper()}", bg=SUCCESS)
         self.refresh()
     
     def exit_vehicle_prompt(self):
@@ -1021,6 +1059,14 @@ class DashboardPage(Page):
         vtype = simpledialog.askstring("Vehicle Type", "Car or Motorcycle:")
         if not number or not vtype:
             toast(self.app, "Cancelled", bg=ERROR); return
+        
+        # Ask for payment method upfront
+        payment_method = simpledialog.askstring("Payment Method", 
+                                               "Enter payment method (cash/card/digital):", 
+                                               initialvalue="cash")
+        if not payment_method:
+            toast(self.app, "Payment method required", bg=ERROR); return
+        
         # find free slot
         slot = self.app.db.get_free_slot_for_type(vtype)
         if not slot:
@@ -1028,8 +1074,8 @@ class DashboardPage(Page):
         slot_id = slot[0]
         entry_time = now_str()
         user = self.app.current_user or "unknown"
-        self.app.db.park_vehicle(number, vtype, user, slot_id, entry_time)
-        toast(self.app, f"Parked {number} at slot {slot[1]}", bg=SUCCESS)
+        self.app.db.park_vehicle(number, vtype, user, slot_id, entry_time, payment_method)
+        toast(self.app, f"Parked {number} at slot {slot[1]} - Payment: {payment_method.upper()}", bg=SUCCESS)
         self.refresh()
 
     def generate_receipt_from_selection(self):
@@ -1135,7 +1181,7 @@ class VehiclesPage(Page):
         tk.Button(search_frame, text="Clear", command=self.clear_search, bg="#6b7280", fg="white").pack(side="left", padx=5)
         
         # tree
-        cols = ("id","number","type","user","slot_id","entry_time","exit_time")
+        cols = ("id","number","type","user","slot_id","entry_time","exit_time","payment_method")
         self.tree = ttk.Treeview(self, columns=cols, show="headings", height=16)
         for c in cols:
             self.tree.heading(c, text=c)
@@ -1245,12 +1291,8 @@ class PaymentsPage(Page):
             self.app.db.exit_vehicle(number, exit_time)
             v = self.app.db.get_last_vehicle_record(number)
         
-        # Ask for payment method
-        payment_method = simpledialog.askstring("Payment Method", 
-                                               "Enter payment method (cash/card/digital):", 
-                                               initialvalue="cash")
-        if not payment_method:
-            payment_method = "cash"
+        # Get payment method from vehicle record (stored during parking)
+        payment_method = v[7] if len(v) > 7 and v[7] else "cash"
         
         # compute duration and fee
         entry_time = v[5]
@@ -1266,7 +1308,11 @@ class PaymentsPage(Page):
             # Use default rates
             rate = HOURLY_RATE_CAR if v[2].lower().startswith("c") else HOURLY_RATE_MOTOR
         
-        amount = max(0, duration * rate)
+        # Calculate amount with minimum charge of 1000 UGX for 1 hour or less
+        if duration <= 1.0:
+            amount = 1000.0  # Flat rate for 1 hour or less
+        else:
+            amount = max(0, duration * rate)
         amount = round(amount, 2)
         
         # Generate PDF receipt
@@ -1279,23 +1325,44 @@ class PaymentsPage(Page):
             self.app.db.record_payment(v[1], amount, duration_rounded, self.app.current_user, 
                                       os.path.abspath(fname), payment_method)
             
+            toast(self.app, f"✓ PDF Receipt saved: {fname}", bg=SUCCESS)
+            
             # Ask if user wants to send via email
             user_data = self.app.db.get_user(v[3])  # Get vehicle owner's details
             if user_data and len(user_data) > 3 and user_data[3]:  # Has email
-                if messagebox.askyesno("Send Email", f"Send receipt to {user_data[3]}?"):
+                if messagebox.askyesno("Send Email", 
+                                      f"Send receipt to {user_data[3]}?\n\n"
+                                      f"Note: Email must be configured in Settings first."):
                     success, msg = send_email_with_attachment(
                         user_data[3],
-                        "Parking Receipt",
-                        f"Dear {user_data[1]},\n\nPlease find your parking receipt attached.\n\n"
-                        f"Vehicle: {v[1]}\nAmount: {amount} {CURRENCY}\n\nThank you!",
+                        f"Parking Receipt - {v[1]}",
+                        f"Dear {user_data[1]},\n\n"
+                        f"Thank you for using our parking service.\n\n"
+                        f"Receipt Details:\n"
+                        f"Vehicle Number: {v[1]}\n"
+                        f"Vehicle Type: {v[2]}\n"
+                        f"Entry Time: {entry_time}\n"
+                        f"Exit Time: {exit_time}\n"
+                        f"Duration: {duration_rounded:.2f} hours\n"
+                        f"Amount Paid: {amount} {CURRENCY}\n"
+                        f"Payment Method: {payment_method.upper()}\n\n"
+                        f"Please find your detailed receipt attached.\n\n"
+                        f"Best regards,\n"
+                        f"Smart Parking Management System",
                         fname
                     )
                     if success:
-                        toast(self.app, "Receipt emailed successfully!", bg=SUCCESS)
+                        toast(self.app, "✓ Receipt emailed successfully!", bg=SUCCESS)
                     else:
-                        toast(self.app, msg, bg=ERROR)
+                        messagebox.showwarning("Email Failed", f"Could not send email:\n{msg}")
+            else:
+                # No email or user declined - just show success for PDF
+                if not user_data or not user_data[3]:
+                    messagebox.showinfo("Receipt Generated", 
+                                       f"Receipt saved as: {fname}\n\n"
+                                       f"User has no email address on file.\n"
+                                       f"Email sending skipped.")
             
-            toast(self.app, f"PDF Receipt saved: {fname}", bg=SUCCESS)
             self.refresh()
         except Exception as e:
             toast(self.app, f"Error generating receipt: {str(e)}", bg=ERROR)
@@ -1493,29 +1560,34 @@ class SettingsPage(Page):
         self.motor_rate = tk.Entry(card, width=20)
         self.motor_rate.grid(row=2, column=1, pady=5, padx=10)
         
-        tk.Label(card, text="Email Configuration", bg=CARD, font=("Segoe UI", 14, "bold"), fg=ACCENT).grid(row=3, column=0, columnspan=2, pady=(20, 10), sticky="w")
+        tk.Label(card, text="Email Configuration", bg=CARD, font=("Segoe UI", 14, "bold"), fg=ACCENT).grid(row=3, column=0, columnspan=2, pady=(20, 5), sticky="w")
         
-        tk.Label(card, text="SMTP Server:", bg=CARD).grid(row=4, column=0, sticky="w", pady=5)
-        self.smtp_server = tk.Entry(card, width=20)
-        self.smtp_server.grid(row=4, column=1, pady=5, padx=10)
+        # Email configuration help text
+        help_text = tk.Label(card, text="Configure email to send receipts automatically.\nFor Gmail: Use App Password (not regular password)", 
+                            bg=CARD, fg="#6b7280", font=("Segoe UI", 9), justify="left")
+        help_text.grid(row=4, column=0, columnspan=2, sticky="w", pady=(0, 10))
         
-        tk.Label(card, text="SMTP Port:", bg=CARD).grid(row=5, column=0, sticky="w", pady=5)
-        self.smtp_port = tk.Entry(card, width=20)
-        self.smtp_port.grid(row=5, column=1, pady=5, padx=10)
+        tk.Label(card, text="SMTP Server:", bg=CARD).grid(row=5, column=0, sticky="w", pady=5)
+        self.smtp_server = tk.Entry(card, width=25)
+        self.smtp_server.grid(row=5, column=1, pady=5, padx=10)
         
-        tk.Label(card, text="Sender Email:", bg=CARD).grid(row=6, column=0, sticky="w", pady=5)
-        self.sender_email = tk.Entry(card, width=20)
-        self.sender_email.grid(row=6, column=1, pady=5, padx=10)
+        tk.Label(card, text="SMTP Port:", bg=CARD).grid(row=6, column=0, sticky="w", pady=5)
+        self.smtp_port = tk.Entry(card, width=25)
+        self.smtp_port.grid(row=6, column=1, pady=5, padx=10)
         
-        tk.Label(card, text="Sender Password:", bg=CARD).grid(row=7, column=0, sticky="w", pady=5)
-        self.sender_password = tk.Entry(card, show="*", width=20)
-        self.sender_password.grid(row=7, column=1, pady=5, padx=10)
+        tk.Label(card, text="Sender Email:", bg=CARD).grid(row=7, column=0, sticky="w", pady=5)
+        self.sender_email = tk.Entry(card, width=25)
+        self.sender_email.grid(row=7, column=1, pady=5, padx=10)
+        
+        tk.Label(card, text="Sender Password:", bg=CARD).grid(row=8, column=0, sticky="w", pady=5)
+        self.sender_password = tk.Entry(card, show="*", width=25)
+        self.sender_password.grid(row=8, column=1, pady=5, padx=10)
         
         self.email_enabled = tk.BooleanVar()
-        tk.Checkbutton(card, text="Enable Email Notifications", variable=self.email_enabled, bg=CARD).grid(row=8, column=0, columnspan=2, pady=10)
+        tk.Checkbutton(card, text="Enable Email Notifications", variable=self.email_enabled, bg=CARD).grid(row=9, column=0, columnspan=2, pady=10)
         
         btn_frame = tk.Frame(card, bg=CARD)
-        btn_frame.grid(row=9, column=0, columnspan=2, pady=20)
+        btn_frame.grid(row=10, column=0, columnspan=2, pady=20)
         tk.Button(btn_frame, text="Save Settings", bg=ACCENT, fg="white", command=self.save_settings, width=15).pack(side="left", padx=5)
         tk.Button(btn_frame, text="Test Email", bg="#10b981", fg="white", command=self.test_email, width=15).pack(side="left", padx=5)
     
@@ -1640,6 +1712,9 @@ class SettingsPage(Page):
             EMAIL_SETTINGS['sender_password'] = sender_password
             EMAIL_SETTINGS['enabled'] = True
             
+            # Show loading message
+            toast(self.app, "Sending test email...", bg="#f59e0b")
+            
             success, msg = send_email_with_attachment(
                 test_email,
                 "Test Email from Smart Parking System",
@@ -1648,11 +1723,18 @@ class SettingsPage(Page):
             )
             
             if success:
-                toast(self.app, "Test email sent successfully!", bg=SUCCESS)
+                messagebox.showinfo("Success", f"✓ Test email sent successfully to {test_email}!\n\nCheck your inbox (and spam folder).")
             else:
-                toast(self.app, f"Email test failed: {msg}", bg=ERROR)
+                messagebox.showerror("Email Test Failed", 
+                    f"Failed to send test email.\n\n"
+                    f"Error: {msg}\n\n"
+                    f"Common issues:\n"
+                    f"• Gmail: Use App Password (not regular password)\n"
+                    f"• Check SMTP server and port are correct\n"
+                    f"• Verify email and password\n"
+                    f"• Check internet connection")
         except Exception as e:
-            toast(self.app, f"Error testing email: {str(e)}", bg=ERROR)
+            messagebox.showerror("Error", f"Error testing email:\n\n{str(e)}")
 
 # ---------- REPORTS PAGE ----------
 class ReportsPage(Page):
