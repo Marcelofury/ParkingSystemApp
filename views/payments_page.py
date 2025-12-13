@@ -140,7 +140,7 @@ class PaymentsPage(Page):
             self.app.db.record_payment(v[1], amount, duration_rounded, self.app.current_user, 
                                       filepath, payment_method)
             
-            toast(self.app, f"✓ PDF Receipt saved: {fname}", bg=SUCCESS)
+            toast(self.app, f"PDF Receipt saved: {fname}", bg=SUCCESS)
             
             # Automatically send email to user (vehicle owner)
             user_data = self.app.db.get_user(v[3])  # Get vehicle owner's details

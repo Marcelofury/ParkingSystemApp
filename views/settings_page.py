@@ -221,7 +221,7 @@ class SettingsPage(Page):
             )
             
             if success:
-                messagebox.showinfo("Success", f"✓ Test email sent successfully to {test_email}!\n\nCheck your inbox (and spam folder).")
+                messagebox.showinfo("Success", f"Test email sent successfully to {test_email}!\n\nCheck your inbox (and spam folder).")
             else:
                 messagebox.showerror("Email Test Failed", 
                     f"Failed to send test email.\n\n"
