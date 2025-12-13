@@ -55,7 +55,7 @@ class UserDashboardPage(Page):
         tk.Label(info_card, text="Quick Park Your Vehicle", bg=CARD, font=("Segoe UI", 18, "bold"), fg=ACCENT).pack(pady=(0, 20))
         tk.Label(info_card, text="Click the button below to park your vehicle quickly", bg=CARD, font=("Segoe UI", 11)).pack(pady=5)
         
-        tk.Button(info_card, text="🚗 Quick Park Now", command=self.quick_park, 
+        tk.Button(info_card, text=" Quick Park Now", command=self.quick_park, 
                  bg=SUCCESS, fg="white", font=("Segoe UI", 14, "bold"), padx=30, pady=15).pack(pady=20)
         
         # Divider

@@ -144,9 +144,10 @@ class PaymentsPage(Page):
             
             # Automatically send email to user (vehicle owner)
             user_data = self.app.db.get_user(v[3])  # Get vehicle owner's details
-            if user_data and len(user_data) > 4 and user_data[4]:  # Has email (index 4)
-                user_email = user_data[4]
-                user_fullname = user_data[2] if len(user_data) > 2 else v[3]
+            # user_data = (username, full_name, role, email)
+            if user_data and len(user_data) > 3 and user_data[3]:  # Has email (index 3)
+                user_email = user_data[3]
+                user_fullname = user_data[1] if len(user_data) > 1 else v[3]
                 
                 # Send email automatically
                 success, msg = send_email_with_attachment(
