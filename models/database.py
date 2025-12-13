@@ -4,6 +4,8 @@ Handles all SQLite operations and CRUD functionality
 """
 
 import sqlite3
+import os
+import sys
 from utils.helpers import hash_password, now_str
 
 
@@ -11,6 +13,21 @@ class DB:
     """Database manager class handling all database operations"""
     
     def __init__(self, path="parking_system_upgraded.db"):
+        # Use absolute path to ensure same database is used by source and executable
+        if not os.path.isabs(path):
+            # Always use the project root directory for the database
+            if getattr(sys, 'frozen', False):
+                # Running as compiled executable
+                # sys.executable points to: /home/top-g/Final OOP/dist/SmartParkingSystem/SmartParkingSystem
+                # We need: /home/top-g/Final OOP/
+                exe_dir = os.path.dirname(sys.executable)  # /home/top-g/Final OOP/dist/SmartParkingSystem
+                dist_dir = os.path.dirname(exe_dir)         # /home/top-g/Final OOP/dist
+                app_dir = os.path.dirname(dist_dir)         # /home/top-g/Final OOP
+            else:
+                # Running from source - go up from models/ to project root
+                app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            path = os.path.join(app_dir, path)
+        
         self.conn = sqlite3.connect(path, check_same_thread=False)
         self.cursor = self.conn.cursor()
         self.init_schema()
