@@ -7,6 +7,8 @@ from tkinter import ttk, messagebox, simpledialog, filedialog
 import sqlite3
 import datetime
 import math
+import os
+import sys
 import matplotlib
 matplotlib.use('TkAgg')
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -116,53 +118,71 @@ class PaymentsPage(Page):
             amount = max(0, duration * rate)
         amount = round(amount, 2)
         
-        # Generate PDF receipt
+        # Generate PDF receipt in receipts directory
+        # Create receipts directory if it doesn't exist
+        if getattr(sys, 'frozen', False):
+            # Running as executable - go up from dist/SmartParkingSystem/
+            receipts_dir = os.path.join(os.path.dirname(os.path.dirname(sys.executable)), 'receipts')
+        else:
+            # Running from source
+            receipts_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'receipts')
+        
+        os.makedirs(receipts_dir, exist_ok=True)
+        
         fname = f"receipt_{v[1]}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+        filepath = os.path.join(receipts_dir, fname)
+        
         try:
             generate_pdf_receipt(v, amount, duration_rounded, payment_method, 
-                               self.app.current_user, fname)
+                               self.app.current_user, filepath)
             
             # record payment
             self.app.db.record_payment(v[1], amount, duration_rounded, self.app.current_user, 
-                                      os.path.abspath(fname), payment_method)
+                                      filepath, payment_method)
             
             toast(self.app, f"✓ PDF Receipt saved: {fname}", bg=SUCCESS)
             
-            # Ask if user wants to send via email
+            # Automatically send email to user (vehicle owner)
             user_data = self.app.db.get_user(v[3])  # Get vehicle owner's details
-            if user_data and len(user_data) > 3 and user_data[3]:  # Has email
-                if messagebox.askyesno("Send Email", 
-                                      f"Send receipt to {user_data[3]}?\n\n"
-                                      f"Note: Email must be configured in Settings first."):
-                    success, msg = send_email_with_attachment(
-                        user_data[3],
-                        f"Parking Receipt - {v[1]}",
-                        f"Dear {user_data[1]},\n\n"
-                        f"Thank you for using our parking service.\n\n"
-                        f"Receipt Details:\n"
-                        f"Vehicle Number: {v[1]}\n"
-                        f"Vehicle Type: {v[2]}\n"
-                        f"Entry Time: {entry_time}\n"
-                        f"Exit Time: {exit_time}\n"
-                        f"Duration: {duration_rounded:.2f} hours\n"
-                        f"Amount Paid: {amount} {CURRENCY}\n"
-                        f"Payment Method: {payment_method.upper()}\n\n"
-                        f"Please find your detailed receipt attached.\n\n"
-                        f"Best regards,\n"
-                        f"Smart Parking Management System",
-                        fname
-                    )
-                    if success:
-                        toast(self.app, "✓ Receipt emailed successfully!", bg=SUCCESS)
-                    else:
-                        messagebox.showwarning("Email Failed", f"Could not send email:\n{msg}")
+            if user_data and len(user_data) > 4 and user_data[4]:  # Has email (index 4)
+                user_email = user_data[4]
+                user_fullname = user_data[2] if len(user_data) > 2 else v[3]
+                
+                # Send email automatically
+                success, msg = send_email_with_attachment(
+                    user_email,
+                    f"Parking Receipt - {v[1]}",
+                    f"Dear {user_fullname},\n\n"
+                    f"Thank you for using our parking service.\n\n"
+                    f"Receipt Details:\n"
+                    f"Vehicle Number: {v[1]}\n"
+                    f"Vehicle Type: {v[2]}\n"
+                    f"Entry Time: {entry_time}\n"
+                    f"Exit Time: {exit_time}\n"
+                    f"Duration: {duration_rounded:.2f} hours\n"
+                    f"Amount Paid: {amount} {CURRENCY}\n"
+                    f"Payment Method: {payment_method.upper()}\n\n"
+                    f"Please find your detailed receipt attached.\n\n"
+                    f"Best regards,\n"
+                    f"Smart Parking Management System",
+                    filepath
+                )
+                if success:
+                    messagebox.showinfo("Receipt Sent", 
+                                       f"Receipt generated successfully!\n\n"
+                                       f"Saved as: {fname}\n"
+                                       f"Email sent to: {user_email}")
+                else:
+                    messagebox.showwarning("Email Failed", 
+                                          f"Receipt saved as: {fname}\n\n"
+                                          f"Could not send email to {user_email}:\n{msg}\n\n"
+                                          f"Please check email settings in Admin > Settings.")
             else:
-                # No email or user declined - just show success for PDF
-                if not user_data or not user_data[3]:
-                    messagebox.showinfo("Receipt Generated", 
-                                       f"Receipt saved as: {fname}\n\n"
-                                       f"User has no email address on file.\n"
-                                       f"Email sending skipped.")
+                # No email on file
+                messagebox.showinfo("Receipt Generated", 
+                                   f"Receipt saved as: {fname}\n\n"
+                                   f"User has no email address on file.\n"
+                                   f"Email cannot be sent.")
             
             self.refresh()
         except Exception as e:
