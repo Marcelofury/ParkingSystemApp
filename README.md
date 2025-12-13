@@ -1,102 +1,90 @@
-# Smart Parking Management System - Complete Edition
+# Smart Parking Management System
 
-A comprehensive desktop application for managing parking facilities with advanced features including PDF receipts, email notifications, analytics, and reporting.
+A desktop application for managing parking facilities with PDF receipts, email notifications, and analytics.
 
-Status: Complete
-Python Version: 3.12
-License: Educational
-
----
+**Course**: UTAMU CSC 1201/CS 200 OOP  
+**Python**: 3.12  
+**Status**: Complete
 
 ## Features
 
-### For Regular Users
-- Park vehicles with automatic slot allocation
-- Exit vehicles with automatic fee calculation
-- Search parking records by vehicle, user, or date
-- Receive PDF receipts via email
-- View comprehensive payment history
-- Multiple payment methods (Cash, Card, Digital)
-- Switch account functionality
+**User Features:**
+- Park/exit vehicles with automatic slot assignment
+- PDF receipts sent via email automatically
+- Payment history and search
+- Multiple payment methods (Cash, Card, Mobile Money)
 
-### For Administrators
-- Manage users (add/edit/delete accounts, reset passwords)
-- Manage parking slots with configurable rates per slot
-- Configure system settings (parking rates, email server)
-- Generate PDF and Excel reports
-- View real-time statistics (revenue, occupancy, usage patterns)
-- Access to all user features
-- Separate admin dashboard with advanced analytics
+**Admin Features:**
+- User and slot management
+- System configuration (rates, email settings)
+- Analytics dashboard with charts
+- PDF and Excel reports
+- Revenue tracking
 
-### Key Technical Features
-- Role-based authentication (user/admin)
-- Multiple payment methods tracking
-- Automated receipt generation and email delivery
-- Real-time dashboard with live statistics and charts
-- Comprehensive reporting and analytics
-- SQLite database for reliable data storage
-- Built with Python/Tkinter (desktop GUI)
-- Automatic database migration for updates
-- Payment method stored during parking (asked once)
-- Minimum charge of 1000 UGX for 1 hour or less parking
-
----
-
-## Requirements
-
-### System Requirements
-- OS: Linux, Windows, or macOS
-- Python: 3.8 or higher (tested on 3.12)
-- RAM: 512MB minimum
-- Disk Space: 100MB minimum
-
-### Python Dependencies
-```
-reportlab==4.2.5    # PDF generation
-openpyxl==3.1.5     # Excel export
-matplotlib==3.9.2   # Charts and graphs
-pillow==11.0.0      # Image processing
-```
-
----
+**Technical:**
+- Role-based authentication
+- SQLite database (5 tables)
+- MVC architecture (refactored)
+- Automatic email delivery
+- Minimum charge: 1000 UGX per hour
 
 ## Installation
 
-### 1. Clone or Download the Project
+### Quick Start
 ```bash
-cd "/home/top-g/Final OOP"
+# Run the executable
+cd dist/SmartParkingSystem
+./SmartParkingSystem
 ```
 
-### 2. Create Virtual Environment (Recommended)
+### From Source
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # On Linux/Mac
-# or
-.venv\Scripts\activate  # On Windows
-```
-
-### 3. Install Dependencies
-```bash
+# Install dependencies
 pip install -r requirements.txt
+
+# Run application
+python main.py
 ```
 
-### 4. Run the Application
-```bash
-python finaloop.py
-```
+## Default Login
 
----
+**Admin:**
+- Username: `admin`
+- Password: `admin`
 
-## Quick Start Guide
+**User:**
+- Username: `buteramarcel`
+- Password: `marcel`
 
-### First Login
-Default Admin Credentials:
-- Username: admin
-- Password: admin123
+## Email Setup
 
-IMPORTANT: Change the admin password after first login!
+1. Login as admin
+2. Go to Settings
+3. Configure:
+   - SMTP Server: `smtp.gmail.com`
+   - SMTP Port: `587`
+   - Email: Your Gmail address
+   - Password: Google App Password (16 characters)
+4. Enable Email and Save
+5. Test Email
 
-### Initial Setup (5 Minutes)
+## Usage
+
+**Park Vehicle:**
+1. Quick Park button
+2. Enter vehicle number and type
+3. Select payment method
+4. System assigns slot automatically
+
+**Generate Receipt:**
+1. Go to Payments page
+2. Enter vehicle number
+3. System generates PDF and emails user automatically
+
+**View Reports:**
+- Admin dashboard shows revenue trends
+- Export to Excel from Reports page
+- Search by vehicle/user/date
 
 1. Update Your Profile
    - Go to Account -> Profile
@@ -110,106 +98,26 @@ IMPORTANT: Change the admin password after first login!
    - Configure email (optional but recommended)
    - Click Save Settings
 
-3. Create Parking Slots
-   - Click "Slots" button
-   - Add slots for your parking facility
-   - Set custom rates for special zones if needed
+## Project Structure
 
-4. You're Ready!
-   - Start parking vehicles
-   - Generate receipts
-   - View statistics
-
----
-
-## Documentation
-
-### Complete Documentation Files
-- NEW_FEATURES.md - Detailed list of all features
-- USAGE_GUIDE.md - Step-by-step user guide
-- IMPLEMENTATION_SUMMARY.md - Technical implementation details
-- EMAIL_SETUP_GUIDE.md - Email configuration guide
-- PARKING_UPDATES.md - Payment method and parking flow updates
-- SECURITY_FIX.md - Role-based access control details
-
-### Quick Reference
-
-| Task | Location | Action |
-|------|----------|--------|
-| Park Vehicle | Dashboard | Click "Quick Park" |
-| Exit Vehicle | Vehicles Page | Select vehicle → Exit Vehicle |
-| Generate Receipt | Payments Page | Generate Receipt for Vehicle |
-| Search Records | Vehicles/Payments | Use search box |
-| View Analytics | Dashboard or Reports | Auto-displayed |
-| Export Report | Reports Page | Export to PDF/Excel |
-| Manage Users | Admin Page | Add/Edit/Delete User |
-| Configure Email | Settings Page | Email Configuration |
-| Set Rates | Settings or Slots | Default or per-slot rates |
-
----
-
-## Features Overview
-
-### Dashboard with Real-time Statistics
-- Revenue overview card
-- Occupancy rate display
-- Active vehicles count
-- 7-day revenue trend chart
-- Recent activity feed
-
-### Advanced Search
-- Search vehicles by number, user, or date
-- Search payments by vehicle or date range
-- Real-time filtering with clear button
-
-### Professional PDF Receipts
-- Formatted with tables and styling
-- Complete parking details
-- Payment method tracking
-- Automatic generation and optional email delivery
-
-### Comprehensive Reports
-- PDF summary reports
-- Excel data exports
-- Multiple report types (Revenue, Vehicles, Payments, Slots)
-- Date range filtering
-- Statistical analysis
-
-### Analytics Dashboard
-- Revenue trend charts (14 days)
-- Occupancy pie charts
-- Summary statistics
-- Visual data representation using matplotlib
-
----
-
-## Email Configuration
-
-### For Gmail
-1. Enable 2-factor authentication
-2. Generate an App Password: https://support.google.com/accounts/answer/185833
-3. Use these settings:
-   - SMTP Server: smtp.gmail.com
-   - SMTP Port: 587
-   - Sender Email: Your Gmail address
-   - Sender Password: Your App Password (not regular password)
-
-### For Other Email Providers
-Consult your email provider's SMTP settings documentation.
-See EMAIL_SETUP_GUIDE.md for detailed configuration instructions.
-
----
+```
+Final OOP/
+├── main.py                    # Application entry point
+├── parking_system_upgraded.db # SQLite database
+├── requirements.txt           # Dependencies
+├── models/                    # Database layer
+├── views/                     # UI pages (11 pages)
+├── controllers/               # Application logic
+├── utils/                     # Helpers (PDF, email, Excel)
+├── receipts/                  # Generated receipts
+└── dist/SmartParkingSystem/   # Executable (135MB)
+```
 
 ## Database
 
-### Database File
-- File: parking_system_upgraded.db
-- Type: SQLite3
-- Location: Project root directory
-
-### Tables
-- users - User accounts with roles and emails
-- vehicles - Vehicle parking records with payment methods
+**Tables:** users, vehicles, slots, payments, settings  
+**File:** `parking_system_upgraded.db`  
+**Type:** SQLite3
 - slots - Parking slot configuration with rates
 - payments - Payment records with methods
 - settings - System configuration
@@ -289,106 +197,55 @@ python finaloop.py 2>&1 | tee error.log
 ## Tips and Best Practices
 
 ### For Daily Operations
-1. Use "Quick Park" for fastest vehicle entry
-2. Search by vehicle number for quick lookups
-3. Generate receipts immediately upon exit
-4. Review dashboard statistics regularly
-5. Payment method is asked once during parking
+## Technical Details
 
-### For Administrators
-1. Backup database weekly
-2. Generate monthly reports for records
-3. Update rates seasonally if needed
-4. Monitor occupancy trends
-5. Keep user emails updated for automatic receipts
-6. Test email configuration before relying on it
+**OOP Concepts:**
+- Classes and inheritance
+- Encapsulation and abstraction
+- MVC architecture
 
-### For System Maintenance
-1. Regular database backups
-2. Clean up old receipt PDFs periodically
-3. Monitor disk space usage
-4. Review and update settings as needed
-5. Check log files for errors
+**Technologies:**
+- Python/Tkinter GUI
+- SQLite database
+- ReportLab (PDF)
+- OpenPyXL (Excel)
+- Matplotlib (Charts)
 
----
+**Statistics:**
+- 20+ modules
+- 2,444 lines of code
+- 5 database tables
+- 30+ features
 
-## Educational Use
+## Troubleshooting
 
-This project demonstrates:
-- Object-Oriented Programming: Classes, inheritance, encapsulation
-- GUI Development: Tkinter/ttk widgets, event handling
-- Database Management: SQLite, CRUD operations, schema migrations
-- File Operations: PDF generation, Excel creation
-- Network Programming: SMTP email integration
-- Data Visualization: Matplotlib charts and graphs
-- Software Architecture: Multi-page application design
-- Business Logic: Real-world parking management
-- Security: Password hashing, role-based access
+**Email not sending:**
+- Use Google App Password (not regular password)
+- Enable 2FA on Gmail first
+- Check spam folder
 
----
+**Receipt not found:**
+- Check `/receipts/` folder
+- Ensure vehicle has exited
+- Verify payment recorded
 
-## Project Statistics
+**Slow startup:**
+- Normal on first run (font cache building)
+- Subsequent runs are faster
 
-- Total Lines of Code: Approximately 2000
-- Number of Classes: 12 (including 10 page classes)
-- Database Tables: 5
-- Features Implemented: 30+
-- Dependencies: 4 external libraries
-- Documentation Pages: 6 comprehensive guides
+## Documentation
 
----
+- `EMAIL_SETUP_GUIDE.md` - Email configuration
+- `REFACTORING_SUMMARY.md` - Code structure
+- `PROJECT_STRUCTURE.md` - Architecture details
+- `FINAL_ANALYSIS.md` - Complete analysis
 
-## Known Limitations
+## Course Information
 
-1. Email sending blocks UI - Brief pause when sending emails
-2. SQLite limitations - Best for single-user or small teams
-3. No cloud sync - Local database only
-4. Basic authentication - No password complexity requirements
-5. No audit logging - Changes not tracked historically
-
-### Recommended Improvements for Production
-- Asynchronous email sending
-- PostgreSQL/MySQL for multi-user scenarios
-- Cloud backup integration
-- Enhanced security features
-- Comprehensive audit trail
-- Mobile app companion
-
----
-
-## License
-
-This project is for educational purposes as part of a university assignment.
-
-Institution: UTAMU
-Course: Final OOP Project
-Date: December 2025
-
----
-
-## Support and Help
-
-### Getting Help
-1. Read the USAGE_GUIDE.md
-2. Check NEW_FEATURES.md for feature details
-3. Review IMPLEMENTATION_SUMMARY.md for technical info
-4. Review EMAIL_SETUP_GUIDE.md for email configuration
-5. Review PARKING_UPDATES.md for parking flow changes
-6. Examine the code comments in finaloop.py
-
-### Reporting Issues
-Document the following:
-- Python version
-- Operating system
-- Error message (if any)
-- Steps to reproduce
-- Expected vs actual behavior
-
----
-
-## Project Status
-
-Status: COMPLETE AND FULLY FUNCTIONAL
+**Institution:** UTAMU  
+**Course:** CSC 1201/CS 200 OOP  
+**Date:** December 2025  
+**Status:** Complete
 
 All features implemented, tested, and documented. Ready for use, demonstration, or submission.
 
@@ -440,34 +297,12 @@ For questions about this project, please refer to the documentation files or con
 
 Built with Python, Tkinter, SQLite, and modern best practices
 
----
+## License
 
-## Quick Commands Reference
-
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Run application
-python finaloop.py
-
-# Backup database
-cp parking_system_upgraded.db backup.db
-
-# Check Python version
-python --version
-
-# View dependencies
-pip list
-
-# Create fresh virtual environment
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+Educational project for UTAMU CSC 1201/CS 200 OOP course.
 
 ---
 
-Last Updated: December 10, 2025
-Version: 2.0 (Complete Edition)
-Status: Production Ready
+**Last Updated:** December 13, 2025  
+**Version:** 2.0  
+**Status:** Complete
