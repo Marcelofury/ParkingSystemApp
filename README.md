@@ -2,7 +2,7 @@
 
 A desktop application for managing parking facilities with PDF receipts, email notifications, and analytics.
 
-**Course**: UTAMU CSC 1201/CS 200 OOP  
+**Course**:  OOP +tkinter 
 **Python**: 3.12  
 **Status**: Complete
 
@@ -50,11 +50,11 @@ python main.py
 
 **Admin:**
 - Username: `admin`
-- Password: `admin`
+- Password: `---`
 
 **User:**
 - Username: `buteramarcel`
-- Password: `marcel`
+- Password: `---`
 
 ## Email Setup
 
@@ -243,7 +243,7 @@ python finaloop.py 2>&1 | tee error.log
 ## Course Information
 
 **Institution:** UTAMU  
-**Course:** CSC 1201/CS 200 OOP  
+**Course:** Object Oriented Programming  
 **Date:** December 2025  
 **Status:** Complete
 
@@ -299,7 +299,7 @@ Built with Python, Tkinter, SQLite, and modern best practices
 
 ## License
 
-Educational project for UTAMU CSC 1201/CS 200 OOP course.
+Educational project for UTAMU CSC 1201/CS 200 Object oriented Programming course.
 
 ---
 
