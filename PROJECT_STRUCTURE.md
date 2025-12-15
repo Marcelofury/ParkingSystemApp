@@ -203,14 +203,14 @@ cd dist/
 
 ## Course Requirements Compliance (UTAMU CSC 1201/CS 200)
 
-- ✅ **Business Domain Selection**: Smart Parking Management (10/10)
-- ✅ **User Authentication**: Secure login with role-based access (10/10)
-- ✅ **Database Integration**: SQLite with 5 tables (15/15)
-- ✅ **Business Features**: 30+ comprehensive features (15/15)
-- ✅ **User Interface**: Professional Tkinter GUI (20/20)
-- ✅ **Architecture**: MVC pattern with separation of concerns (10/10)
-- ✅ **Performance**: Optimized queries and operations (10/10)
-- ✅ **Executable**: 49MB Linux executable compiled (5/5)
+-  **Business Domain Selection**: Smart Parking Management (10/10)
+-  **User Authentication**: Secure login with role-based access (10/10)
+-  **Database Integration**: SQLite with 5 tables (15/15)
+-  **Business Features**: 30+ comprehensive features (15/15)
+-  **User Interface**: Professional Tkinter GUI (20/20)
+-  **Architecture**: MVC pattern with separation of concerns (10/10)
+-  **Performance**: Optimized queries and operations (10/10)
+-  **Executable**: 49MB Linux executable compiled (5/5)
 
 **Estimated Score**: 95/100 marks
 
