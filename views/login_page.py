@@ -7,9 +7,6 @@ from tkinter import ttk, messagebox, simpledialog, filedialog
 import sqlite3
 import datetime
 import math
-import os
-import sys
-from PIL import Image, ImageTk
 import matplotlib
 matplotlib.use('TkAgg')
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -34,46 +31,10 @@ class LoginPage(Page):
         self.build()
 
     def build(self):
-        # Load and set background image
-        try:
-            # Get the correct path for both source and executable
-            if getattr(sys, 'frozen', False):
-                # Running as compiled executable
-                base_path = os.path.dirname(os.path.dirname(os.path.dirname(sys.executable)))
-            else:
-                # Running from source
-                base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            
-            image_path = os.path.join(base_path, "images", "car-park.jpg")
-            
-            # Load original image
-            self.bg_image_original = Image.open(image_path)
-            
-            # Create canvas for background
-            self.bg_canvas = tk.Canvas(self, highlightthickness=0)
-            self.bg_canvas.pack(fill="both", expand=True)
-            
-            # Bind resize event to update background
-            self.bind("<Configure>", self.resize_background)
-            
-            # Initial background setup
-            self.resize_background(None)
-            
-            # Create login card on top of canvas
-            card = tk.Frame(self.bg_canvas, bg="#ffffff", padx=40, pady=35)
-            card.place(relx=0.5, rely=0.45, anchor="center")
-            
-            # Add subtle shadow effect with border
-            card.configure(relief="raised", borderwidth=3)
-            
-        except Exception as e:
-            # Fallback if image loading fails
-            print(f"Could not load background image: {e}")
-            card = tk.Frame(self, bg=CARD, padx=30, pady=30) 
-            card.place(relx=0.5, rely=0.45, anchor="center")
-    
-        # Build card contents
-        tk.Label(card, text="Login", font=("Segoe UI", 20, "bold"), bg="white", fg=ACCENT).pack(pady=(0,10))
+        card = tk.Frame(self, bg=CARD, padx=20, pady=20) 
+        card.place(relx=0.5, rely=0.45, anchor="center")
+
+        tk.Label(card, text="Login", font=("Segoe UI", 20, "bold"), bg=CARD, fg=ACCENT).pack(pady=(0,10))
         tk.Label(card, text="Username", bg="white").pack(anchor="w")
         self.username = tk.Entry(card, width=30, font=("Segoe UI", 10))
         self.username.pack(pady=5)
