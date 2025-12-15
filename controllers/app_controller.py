@@ -67,12 +67,127 @@ class App(tk.Tk):
             page.refresh()
 
     def show_about(self):
-        """Show about dialog"""
-        messagebox.showinfo("About", 
-                          "Smart Parking System\n"
-                          "Upgraded for UTAMU project.\n"
-                          "Author: Student\n"
-                          "Features: SQLite, hashed passwords, slots, payments, receipts.")
+        """Show beautifully designed about dialog"""
+        about_window = tk.Toplevel(self)
+        about_window.title("About Smart Parking System")
+        about_window.geometry("500x600")
+        about_window.configure(bg="#ffffff")
+        about_window.resizable(False, False)
+        
+        # Center the window
+        about_window.transient(self)
+        about_window.grab_set()
+        
+        # Header with gradient effect using frame
+        header = tk.Frame(about_window, bg=ACCENT, height=120)
+        header.pack(fill="x")
+        
+        # App icon/title
+        tk.Label(header, text="🅿️", font=("Segoe UI", 48), bg=ACCENT, fg="white").pack(pady=10)
+        tk.Label(header, text="Smart Parking System", font=("Segoe UI", 18, "bold"), 
+                bg=ACCENT, fg="white").pack()
+        
+        # Canvas and scrollbar container
+        canvas_container = tk.Frame(about_window, bg="white")
+        canvas_container.pack(fill="both", expand=True)
+        
+        # Create canvas and scrollbar
+        canvas = tk.Canvas(canvas_container, bg="white", highlightthickness=0)
+        scrollbar = tk.Scrollbar(canvas_container, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg="white")
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw", width=480)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Enable mousewheel scrolling
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        # Content area
+        content = tk.Frame(scrollable_frame, bg="white", padx=30, pady=20)
+        content.pack(fill="both", expand=True)
+        
+        # Version info
+        tk.Label(content, text="Version 2.0", font=("Segoe UI", 11), 
+                bg="white", fg="#666").pack(pady=(0, 5))
+        
+        # Divider
+        tk.Frame(content, bg="#e5e7eb", height=2).pack(fill="x", pady=15)
+        
+        # Description
+        desc_text = ("A comprehensive desktop application for managing\n"
+                    "parking facilities with automated billing, PDF receipts,\n"
+                    "email notifications, and real-time analytics.")
+        tk.Label(content, text=desc_text, font=("Segoe UI", 10), 
+                bg="white", fg="#374151", justify="center").pack(pady=10)
+        
+        # Features section
+        features_frame = tk.Frame(content, bg="white")
+        features_frame.pack(pady=15, fill="x")
+        
+        tk.Label(features_frame, text="Key Features", font=("Segoe UI", 12, "bold"),
+                bg="white", fg=ACCENT).pack(anchor="w", pady=(0, 10))
+        
+        features = [
+            "✓ Role-based authentication (Admin/User)",
+            "✓ Real-time slot management",
+            "✓ Automatic payment calculation",
+            "✓ PDF receipt generation",
+            "✓ Email notifications",
+            "✓ Analytics dashboard with charts",
+            "✓ Excel/PDF report exports",
+            "✓ Multi-payment method support"
+        ]
+        
+        for feature in features:
+            tk.Label(features_frame, text=feature, font=("Segoe UI", 9),
+                    bg="white", fg="#4b5563", anchor="w").pack(anchor="w", pady=2)
+        
+        # Technical info
+        tk.Frame(content, bg="#e5e7eb", height=2).pack(fill="x", pady=15)
+        
+        tech_frame = tk.Frame(content, bg="white")
+        tech_frame.pack(fill="x")
+        
+        tech_info = [
+            ("Technology:", "Python 3.12 + Tkinter"),
+            ("Architecture:", "MVC Pattern"),
+            ("Database:", "SQLite3 (5 tables)"),
+            ("Course:", "OOP + Tkinter"),
+        ]
+        
+        for label, value in tech_info:
+            row = tk.Frame(tech_frame, bg="white")
+            row.pack(fill="x", pady=3)
+            tk.Label(row, text=label, font=("Segoe UI", 9, "bold"),
+                    bg="white", fg="#374151", width=12, anchor="w").pack(side="left")
+            tk.Label(row, text=value, font=("Segoe UI", 9),
+                    bg="white", fg="#6b7280", anchor="w").pack(side="left")
+        
+        # Footer
+        tk.Frame(content, bg="#e5e7eb", height=2).pack(fill="x", pady=15)
+        
+        tk.Label(content, text="© 2025 Smart Parking System", 
+                font=("Segoe UI", 8), bg="white", fg="#9ca3af").pack()
+        tk.Label(content, text="All rights reserved", 
+                font=("Segoe UI", 8), bg="white", fg="#9ca3af").pack()
+        
+        # Close button
+        btn_frame = tk.Frame(about_window, bg="white", pady=15)
+        btn_frame.pack(fill="x")
+        
+        tk.Button(btn_frame, text="Close", command=about_window.destroy,
+                 bg=ACCENT, fg="white", font=("Segoe UI", 10, "bold"),
+                 padx=40, pady=8, relief="flat", cursor="hand2").pack()
 
     def show_profile(self):
         """Navigate to profile page"""
