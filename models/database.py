@@ -257,6 +257,11 @@ class DB:
         """Get list of all parked vehicles"""
         self.cursor.execute("SELECT id,number,type,user,slot_id,entry_time,exit_time,payment_method FROM vehicles ORDER BY id DESC")
         return self.cursor.fetchall()
+    
+    def list_user_vehicles(self, username):
+        """Get list of vehicles for a specific user"""
+        self.cursor.execute("SELECT id,number,type,user,slot_id,entry_time,exit_time,payment_method FROM vehicles WHERE user=? ORDER BY id DESC", (username,))
+        return self.cursor.fetchall()
 
     def search_vehicles(self, search_term="", date_from="", date_to=""):
         """Search vehicles by number, user, or date range"""
@@ -266,6 +271,27 @@ class DB:
         if search_term:
             query += " AND (number LIKE ? OR user LIKE ?)"
             params.extend([f"%{search_term}%", f"%{search_term}%"])
+        
+        if date_from:
+            query += " AND entry_time >= ?"
+            params.append(date_from)
+        
+        if date_to:
+            query += " AND entry_time <= ?"
+            params.append(date_to)
+        
+        query += " ORDER BY id DESC"
+        self.cursor.execute(query, params)
+        return self.cursor.fetchall()
+    
+    def search_user_vehicles(self, username, search_term="", date_from="", date_to=""):
+        """Search vehicles for a specific user"""
+        query = "SELECT id,number,type,user,slot_id,entry_time,exit_time,payment_method FROM vehicles WHERE user=?"
+        params = [username]
+        
+        if search_term:
+            query += " AND number LIKE ?"
+            params.append(f"%{search_term}%")
         
         if date_from:
             query += " AND entry_time >= ?"
@@ -315,6 +341,31 @@ class DB:
             params.append(date_to)
         
         query += " ORDER BY id DESC"
+        self.cursor.execute(query, params)
+        return self.cursor.fetchall()
+    
+    def search_user_payments(self, username, search_term="", date_from="", date_to=""):
+        """Search payments for vehicles owned by a specific user"""
+        query = """SELECT p.id, p.vehicle_number, p.amount, p.paid_at, p.duration_hours, 
+                          p.generated_by, p.receipt_path, p.payment_method
+                   FROM payments p
+                   INNER JOIN vehicles v ON p.vehicle_number = v.number
+                   WHERE v.user = ?"""
+        params = [username]
+        
+        if search_term:
+            query += " AND p.vehicle_number LIKE ?"
+            params.append(f"%{search_term}%")
+        
+        if date_from:
+            query += " AND p.paid_at >= ?"
+            params.append(date_from)
+        
+        if date_to:
+            query += " AND p.paid_at <= ?"
+            params.append(date_to)
+        
+        query += " ORDER BY p.id DESC"
         self.cursor.execute(query, params)
         return self.cursor.fetchall()
     
@@ -372,3 +423,15 @@ class DB:
         """Get all settings as a dictionary"""
         self.cursor.execute("SELECT key, value FROM settings")
         return dict(self.cursor.fetchall())
+    
+    def get_user_payments(self, username):
+        """Get all payments for vehicles owned by a specific user"""
+        self.cursor.execute("""
+            SELECT p.id, p.vehicle_number, p.amount, p.paid_at, p.duration_hours, 
+                   p.generated_by, p.receipt_path, p.payment_method
+            FROM payments p
+            INNER JOIN vehicles v ON p.vehicle_number = v.number
+            WHERE v.user = ?
+            ORDER BY p.id DESC
+        """, (username,))
+        return self.cursor.fetchall()

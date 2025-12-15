@@ -60,14 +60,27 @@ class PaymentsPage(Page):
     def refresh(self):
         for r in self.tree.get_children():
             self.tree.delete(r)
-        for row in self.app.db.list_payments():
+        # Admin sees all payments, regular users see only their own
+        current_user = self.app.current_user
+        user_role = self.app.db.get_user(current_user)
+        if user_role and user_role[2] == 'admin':
+            payments = self.app.db.list_payments()
+        else:
+            payments = self.app.db.get_user_payments(current_user)
+        for row in payments:
             self.tree.insert("", "end", values=row[:7])  # Exclude receipt path column
     
     def search(self):
         search_term = self.search_entry.get().strip()
         for r in self.tree.get_children():
             self.tree.delete(r)
-        results = self.app.db.search_payments(search_term)
+        # Admin searches all payments, regular users search only their own
+        current_user = self.app.current_user
+        user_role = self.app.db.get_user(current_user)
+        if user_role and user_role[2] == 'admin':
+            results = self.app.db.search_payments(search_term)
+        else:
+            results = self.app.db.search_user_payments(current_user, search_term)
         for row in results:
             self.tree.insert("", "end", values=row[:7])
         toast(self.app, f"Found {len(results)} results", bg=SUCCESS)

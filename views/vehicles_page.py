@@ -58,14 +58,27 @@ class VehiclesPage(Page):
     def refresh(self):
         for r in self.tree.get_children():
             self.tree.delete(r)
-        for row in self.app.db.list_parked():
+        # Admin sees all vehicles, regular users see only their own
+        current_user = self.app.current_user
+        user_role = self.app.db.get_user(current_user)
+        if user_role and user_role[2] == 'admin':
+            vehicles = self.app.db.list_parked()
+        else:
+            vehicles = self.app.db.list_user_vehicles(current_user)
+        for row in vehicles:
             self.tree.insert("", "end", values=row)
     
     def search(self):
         search_term = self.search_entry.get().strip()
         for r in self.tree.get_children():
             self.tree.delete(r)
-        results = self.app.db.search_vehicles(search_term)
+        # Admin searches all vehicles, regular users search only their own
+        current_user = self.app.current_user
+        user_role = self.app.db.get_user(current_user)
+        if user_role and user_role[2] == 'admin':
+            results = self.app.db.search_vehicles(search_term)
+        else:
+            results = self.app.db.search_user_vehicles(current_user, search_term)
         for row in results:
             self.tree.insert("", "end", values=row)
         toast(self.app, f"Found {len(results)} results", bg=SUCCESS)
