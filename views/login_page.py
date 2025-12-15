@@ -31,7 +31,7 @@ class LoginPage(Page):
         self.build()
 
     def build(self):
-        card = tk.Frame(self, bg=CARD, padx=20, pady=20)
+        card = tk.Frame(self, bg=CARD, padx=20, pady=20) 
         card.place(relx=0.5, rely=0.45, anchor="center")
 
         tk.Label(card, text="Login", font=("Segoe UI", 20, "bold"), bg=CARD, fg=ACCENT).pack(pady=(0,10))

@@ -11,7 +11,7 @@ This is a comprehensive parking management system with:
 - Analytics and reporting
 - System settings configuration
 
-Author: Student
+Author: Butera Marcel
 Course: UTAMU CSC 1201/CS 200 OOP
 Date: December 2025
 """
